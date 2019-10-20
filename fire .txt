@@ -1078,9 +1078,9 @@ int execv(const char *path, char *const argv[]); int execvp(const char *file, ch
 int execvpe(const char *file, char *const argv[],
                    char *const envp[]);
 	
+	加载的程序是否需要确定的给出所在
 	
-	
-带p和不带p的区别： 加载的程序是否需要确定的给出所在
+带p和不带p的区别： 
 路径。	
 	
 v和l的区别，程序的运行参数是函数的参数平铺，或者直接
@@ -1107,6 +1107,260 @@ v和l的区别，程序的运行参数是函数的参数平铺，或者直接
 	
 	%*c  将缓冲区中剩下的\n取出来，否则造成死循环
 
+	
+	
+	//需要将整体字符串解析出： 程序名称+ 参数环境变量
+	
+	空白字符不一定是空格。
+	 
+	
+	isspace（）检测空白字符。
+	
+	chdir（argv[1])改变当前工作路径。
+	
+	
+	
+	
+	shell中处理外部命令是通过创建子进程后程序替换完成功能
+	还有一部分命令是内建命令。也就是shell自身实现的功能
+	比如cd  改变当前所在的路径。
+	
+	
+	
+	
+	
+	
+回顾标准库IO接口    FILE*fp   (文件流指针） 
+
+学习linux下的系统调用IO接口   （int fd) -》(文件描述符：
+
+文件描述符：      
+	文件流指针和文件描述符的关系；
+	重定向的原理-》 minishell中重定向的实现。
+	
+静态库与动态库的生成与使用，
+	
+	文件系统（选学）
+	      软连接与硬链接
+		  
+		
+		
+		
+	
+
+	
+标准库IO接口的回顾：
+		
+ fopen (path ，mode（r r+ w w+ a a+）   fread/fwrite   	
+ 
+ fseek             fclose    
+ 
+		
+FILE * fopen（const char *path,const char *mode);
+
+size_t fread(void * ptr,size_t size,size_t nmemb,FILE *stream)
+ 
+ size_t fwrite(void * ptr,size_t size,size_t nmemb,FILE * stream)
+ 
+ int fseek(FILE *stream,long offset ,int whence)
+ 
+ int fclose(FILE * fp);
+		
+	fgets
+    fprintf
+    sprintf
+    printf
+
+	文件路径名        
+    mode   r 只读     r+   可读可写
+   w   只写   文件不存在则创建，  如文件存在则清空原有内容
+ w+  相教于w，多出了可读的操作
+  a 追加写打开，若文件不纯在则创建，每次总是写到文件末尾
+  a+  相教于a，多出了可读操作。
+		
+返回值L文件的操作句柄 ---文件流指针	
+
+	
+	
+	size_t fwrite(void * ptr,size_t size,size_t nmemb,FILE * stream)	
+		
+		
+	ptr ： 要写入的数据
+    size:    要写入的块大小  --fwrite对数据进行按块操作
+    nmemb   要写入的快个数
+	stream   fopen返回的文件流指针
+	
+	返回值：   实际写入块的个数
+	   
+		
+		
+	size_t fread(void * ptr,size_t size,size_t nmemb,FILE *stream)	
+		
+	ptr:   	用于接受数据的缓冲区
+	size：  块的大小
+	nmemb   要读取的块的个数
+	stream  文件流指针。
+	
+	
+	
+	返回值：  实际读取到块个数，读到末尾
+        会返回0； 		
+		
+		
+		
+	int fseek(FILE *stream,long offset ,int whence)	
+	跳转读写位置	
+	对stream文件的读写位置跳转到whence位置偏移offset个字节。
+	
+	whence：  跳转的起始位置。 
+		SEEK_SET  文件起始位置
+		SEEK_CUR   当前读写位置
+		SEEK_END    文件末尾位置
+		offset   ：  偏移量。
+		
+		
+		
+	fopen先打开文件	
+		fopen(r r+w w+a a+ )   fwrite/fread  
+		 fseek     fclose  最后一定要关闭，
+		 
+		 
+
+系统调用IO接口基本使用：
+    
+	open
+	write
+	read
+	lseek
+	close
+	
+	
+int open(const char * pathname,int flags,mode_t mode)
+	功能：打开文件 
+	pathname ：指定要打开的文件名称
+  flages：    选项参数  
+	必选参数:   O_RDONLY   O_WRNOLY  O_RDWR（只能选一）
+	可选参数：  O_CREAT 若文件存在则打开，否则创建新文件
+			O_EXCL  与O_CREAT同时使用，若文件存在则报错
+			不存在则创建。
+		  O_TRUNC  打开文件的同时截断文件为0长度（清空）
+          O_APPEND  写数据的时候总是写到文件末尾。
+		
+	
+返回值：   文件描述符（正整数） 
+	如果失败返回-1     
+	
+	
+	
+ssize_t read(int fd,void* buf,size_t count)
+	从fd文件中读取count长度的数据，放到buf中
+	
+	返回值: 返回实际读取的字节数，  失败： -1
+	    读到末尾为0
+		
+
+
+
+
+
+ssize_t write(int fd,const void * buf,size_t count)
+	fd：  open打开文件所返回的文件描述符
+	buf：   要写入的数据
+	count： 要写入的字节数
+	返回值： 成功实际写入的字节数。 如果错误返回-1
+	
+
+
+
+off_t lseek(int fd,off_t offset,int whence);
+	跳转fd文件的读写位置到指定处
+	whence：   SEEK_SET     SEEK_CUR  SEEK_END:
+    offset    偏移量
+	
+
+
+int close(int fd);　
+	
+	
+	
+ 	umask(0);  将当前进程的文件创建权限掩码修改为mask
+	
+	
+	/dev/sda    sdb第二块    sda1分区  sda2分区
+	
+	计算机上的硬盘
+							struct file * fd_array[]
+文件描述符： 正整数，（内核中文件描述信息结构体的下标）
+	一个数字怎么能操作一个文件？
+		
+		struct file 描述文件
+		把这个结构体放到files_stuct的结构体数组里
+		
+		struct fies_struct
+     	包扩一个结构体数组（struct file *fd_array[]）
+			
+		pcb里有一个指针指向files_struct 
+		
+		STAT（硬盘的接口） 
+	
+	
+	返回的fd是结构体数组的下标
+	    
+			
+		
+	
+文件描述符的分配规则：    最小未使用
+	一个进程运行起来之后，默认会打开三个文件：
+  标准输入文件  ，标准输出文件 标准错误文件
+      0             1           2      int  文件描述符
+	 stdin       stdout      stderr  FILE*  文件流指针。
+	 
+
+文件描述符和文件流指针之间的关系
+	系统调用接口和库函数的关系：库函数封装了系通调用
+	接口
+	
+	printf ---向标准输出文件写入数据
+	标准 输出文件流只指针 ---stdout
+	
+	
+	库函数最终是要调用系统调用接口完成文件数据写入的
+	     --但是系统调用接口用的是文件描述符
+		             |  - ---------------|
+printf(hell0) -->  stdout     write     fd 	1
+ 		                               FILE *fp->_fileno
+	
+	
+重定向：  
+	重定向指的是文件描述符的重定向，文件描述符这个下标
+	中的文件描述信息。从一个文件变为了另一个文件
+	这时候当用户通过文件描述符向文件写入数据的时候，
+	文件描述符并没有变依然还是相同的数字，但是因为描述
+	符下标中的文件描述信息的改变，而导致数据流向另一个
+	文件。
+	
+	>>   追加重定向    O_APPEND   
+	>     清空重定向   O_TRUNC
+	
+	
+	
+	
+	
+	int dup2(int oldfd,int newfd) （将newfd从定向到oldfd
+	将oldfd描述符对应的描述信息，向newfd中拷贝一份。
+	让newfd也指向oldfd所指向的文件。
+	若newfd本身已经有打开的文件，则关闭这个文件，
+	
+	
+	
+minishell中的从定向实现。
+	ls -l   >>test.txt
+	字符串检测>>;重定向符号之前是命令及参数 --按照原先
+	解析方式进行解析即可
+	从定向符号>>之后 有要从定向到文件名称
+	在子进程中，进程程序替换之前，按照重定向方式(追加
+	\清空）打开文件
+	
 	
 	
 	
